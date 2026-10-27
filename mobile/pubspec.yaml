@@ -1,0 +1,33 @@
+name: diary_mobile
+description: "Личный дневник — удобное приложение для ведения txt-записей по датам."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  # Хранение настроек/пароля и списка записей
+  shared_preferences: ^2.2.3
+  # Работа с файлами на телефоне + экспорт в TXT
+  path_provider: ^2.1.4
+  # Крипто-хэш для пароля (sha256)
+  crypto: ^3.0.3
+  # Поделиться/сохранить файл через системный файловый менеджер (Android)
+  share_plus: ^10.0.0
+  # Работа с датами и русской локализацией календаря
+  intl: ^0.19.0
+  # Календарь-виджет
+  table_calendar: ^3.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
