@@ -67,16 +67,29 @@
    flutter doctor
    ```
    Должно быть `[√] Android toolchain`.
-3. В папке `mobile` выполните:
+3. ⚠️ **Важно: папка «Дневник» написана кириллицей**, а сборщик Android
+   (Gradle) на Windows не умеет работать с русскими путями — он падает с ошибкой
+   `Your project path contains non-ASCII characters` или
+   `Unable to read file ...app.dill`. Поэтому собирать нужно из папки
+   **без кириллицы в пути**. Скопируйте проект, например:
    ```
+   robocopy "%USERPROFILE%\Desktop\Дневник\mobile" C:\project\diary_mobile /E /XD build .dart_tool .idea
+   cd C:\project\diary_mobile
    flutter build apk --release
    ```
 4. Готовый файл появится тут:
    ```
-   mobile\build\app\outputs\flutter-apk\app-release.apk
+   C:\project\diary_mobile\build\app\outputs\flutter-apk\app-release.apk
    ```
+   (его можно скопировать обратно в `Дневник\mobile\build\...`)
 5. Перекиньте `app-release.apk` на телефон (кабелем, облаком, мессенджером),
    откройте его на телефоне и разрешите установку из неизвестных источников.
+
+> **Готовый APK уже собран** и лежит в
+> `mobile\build\app\outputs\flutter-apk\app-release.apk`.
+> Перед сборкой в `android/gradle.properties` также добавлен
+> `android.overridePathCheck=true` — но одного этого флага недостаточно,
+> кириллицу всё равно нужно убрать из пути сборки.
 
 ### Проверка интерфейса прямо сейчас (без Android Studio)
 

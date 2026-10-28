@@ -1,0 +1,28 @@
+# --- Flutter / Dart ---
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.idea/
+mobile/*.iml
+mobile/android/.gradle/
+mobile/android/app/.cxx/
+mobile/android/local.properties
+mobile/android/diary_mobile_android.iml
+
+# --- Python ---
+desktop/__pycache__/
+desktop/.last_folder.json
+
+# --- Логи и временные ---
+*.log
+build_log.txt
+flutter_run.log
+flutter_run_err.log
+run2.log
+run2err.log
+
+# --- ОС ---
+Thumbs.db
+desktop.ini
+.DS_Store
