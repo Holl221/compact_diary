@@ -391,6 +391,8 @@ class DiaryApp(tk.Tk):
 
         btn_frame = tk.Frame(top, bg=C.BG)
         btn_frame.pack(side="right")
+        ttk.Button(btn_frame, text="⬇  Импорт с телефона",
+                   command=self.import_from_phone).pack(side="left", padx=4)
         ttk.Button(btn_frame, text="📁  Открыть папку с записями",
                    command=self.choose_folder).pack(side="left", padx=4)
         ttk.Button(btn_frame, text="⟳  Обновить",
@@ -547,7 +549,7 @@ class DiaryApp(tk.Tk):
             cfg = Path(__file__).parent / ".last_folder.json"
             try:
                 cfg.write_text(
-                    json.dumps({"folder": str(self.store.folder)}),
+                    json.dumps({"folder": str(self.store.folder)}, ensure_ascii=False),
                     encoding="utf-8",
                 )
             except Exception:
@@ -557,6 +559,91 @@ class DiaryApp(tk.Tk):
         folder = filedialog.askdirectory(title="Выберите папку с txt-записями")
         if folder:
             self.load_folder(folder)
+
+    # Типичные места, где может лежать папка DiaryExport, скинутая с телефона.
+    def _candidate_dirs(self):
+        home = Path.home()
+        names = ["DiaryExport", "diary", "Дневник", "diary_export"]
+        bases = [
+            home / "Downloads",
+            home / "Загрузки",
+            home / "Desktop",
+            home / "Рабочий стол",
+            home / "OneDrive" / "Documents",
+            home / "Documents",
+            home / "OneDrive" / "Рабочий стол",
+        ]
+        found = []
+        for base in bases:
+            if not base.exists():
+                continue
+            # 1) сама папка называется DiaryExport
+            for nm in names:
+                cand = base / nm
+                if cand.is_dir():
+                    found.append(cand)
+            # 2) подпапка DiaryExport внутри других папок (глубина 2)
+            try:
+                for sub in base.iterdir():
+                    if not sub.is_dir():
+                        continue
+                    for nm in names:
+                        cand = sub / nm
+                        if cand.is_dir():
+                            found.append(cand)
+            except OSError:
+                continue
+        # убрать дубликаты, сохранив порядок
+        seen, uniq = set(), []
+        for p in found:
+            rp = str(p.resolve()).lower()
+            if rp not in seen:
+                seen.add(rp)
+                uniq.append(p)
+        return uniq
+
+    def import_from_phone(self):
+        """Ищет папку с записями в типичных местах и загружает её."""
+        candidates = self._candidate_dirs()
+        # оставляем только папки, где реально есть txt с датами
+        real = []
+        for c in candidates:
+            try:
+                has_txt = any(
+                    DATE_RE.search(f.name) for f in c.iterdir()
+                    if f.is_file() and f.suffix.lower() == ".txt"
+                )
+            except OSError:
+                has_txt = False
+            real.append((c, has_txt))
+
+        if not real:
+            if messagebox.askyesno(
+                "Папка не найдена",
+                "Не удалось автоматически найти папку с записями "
+                "(DiaryExport) в Загрузках/Документах/Рабочем столе.\n\n"
+                "Выбрать папку вручную?",
+            ):
+                self.choose_folder()
+            return
+
+        with_data = [c for c, has in real if has]
+
+        # Если ровно одна папка с записями — сразу грузим её.
+        if len(with_data) == 1:
+            self.load_folder(str(with_data[0]))
+            return
+        if not with_data:
+            with_data = [c for c, _ in real]
+
+        # Если несколько — показываем список для выбора.
+        choice = _choose_from_list(
+            self,
+            "Выберите папку с записями",
+            [str(p) for p in with_data],
+        )
+        if choice:
+            self.load_folder(choice)
 
     def load_folder(self, folder, silent=False):
         n = self.store.load_folder(folder)
@@ -684,6 +771,54 @@ class DiaryApp(tk.Tk):
 
     def _set_status(self, msg):
         self.status.config(text=msg)
+
+
+def _choose_from_list(parent, title, items):
+    """Диалог выбора одного элемента из списка (строк). Возвращает выбор или None."""
+    top = tk.Toplevel(parent)
+    top.title(title)
+    top.configure(bg=C.BG)
+    top.geometry("560x360")
+    top.transient(parent)
+    top.grab_set()
+
+    tk.Label(top, text=title, bg=C.BG, fg=C.TEXT,
+             font=("Segoe UI", 11, "bold")).pack(anchor="w", padx=14, pady=(12, 6))
+
+    wrap = tk.Frame(top, bg=C.BG)
+    wrap.pack(fill="both", expand=True, padx=12)
+    lb = tk.Listbox(wrap, bg=C.SURFACE, fg=C.TEXT, selectbackground=C.ACCENT,
+                    selectforeground="#241b0e", borderwidth=0,
+                    highlightthickness=0, font=("Segoe UI", 10))
+    lb.pack(side="left", fill="both", expand=True)
+    sb = ttk.Scrollbar(wrap, orient="vertical", command=lb.yview)
+    sb.pack(side="right", fill="y")
+    lb.config(yscrollcommand=sb.set)
+    for it in items:
+        lb.insert("end", it)
+    if items:
+        lb.selection_set(0)
+
+    result = {"value": None}
+
+    def ok():
+        sel = lb.curselection()
+        if sel:
+            result["value"] = items[sel[0]]
+        top.destroy()
+
+    def cancel():
+        top.destroy()
+
+    bar = tk.Frame(top, bg=C.BG)
+    bar.pack(fill="x", padx=14, pady=12)
+    ttk.Button(bar, text="Отмена", command=cancel).pack(side="right", padx=4)
+    ttk.Button(bar, text="Открыть", style="Accent.TButton",
+               command=ok).pack(side="right", padx=4)
+    lb.bind("<Double-Button-1>", lambda e: ok())
+
+    parent.wait_window(top)
+    return result["value"]
 
 
 def main():
